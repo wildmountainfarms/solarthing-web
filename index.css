@@ -2,19 +2,40 @@ html, body{
 	height: 100%;
 	background-color: #00095d;
     color: #FFF;
+    padding-top: 5px;
 }
-.number{
+h1, h6 {
+	text-align: center;
+}
+.number_div{
 	font-size: 60px;
 	text-align: center;
 }
-#left_div{
-	width: 400px;
-}
-#left_div h2 {
+.number_heading{
+	font-size: 25px;
+	font-weight: bold;
 	text-align: center;
 }
+#battery_voltage, #panel_amps, #panel_volts {
+	font-weight: bold;
+}
+#warnings, #errors_fx, #errors_mx {
+	color: #FF0000;
+}
+#left_div{
+	width: 400px;
+    float: left;
+	/*float: left;*/
+}
+#right_div{
+	margin-left: 400px;
+}
 #chart_div{
-	width: 50%;
-	height: 50%;
-    margin-left: 25%;
+    /*margin-left: 25%;*/
+	background-color: #225fe0;
+}
+#bottom {
+	position: fixed;
+    bottom: 0;
+    width: 100%;
 }
