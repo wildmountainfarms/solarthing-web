@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Solarthing</title>
+		<link rel="stylesheet" type="text/css" href="./index.css">
+		<!--Init javascript libraries-->
+		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+	</head>
+	<body>
+		<div id="left_div">
+            <h2>Current Battery Voltage</h2>
+            <div class="number"><span id="battery_voltage">ERROR</span> Volts</div>
+            <hr/>
+
+			<h2>Solar Panel Status</h2>
+            <div class="number"><span id="panel_amps">ERROR</span> AMPs</div>
+            <div class="number"><span id="panel_volts">ERROR</span> Volts</div>
+			<hr/>
+        </div>
+
+		<div id="chart_div"></div>
+
+        <!--Run our javascript-->
+		<script src="./index.js"></script>
+	</body>
+</html>
