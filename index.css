@@ -1,12 +1,18 @@
+
+/* ==== Tags ==== */
 html, body{
-	height: 100%;
 	background-color: #00095d;
-    color: #FFF;
-    padding-top: 5px;
+	color: #FFF;
+	padding-top: 5px;
+	padding-bottom: 0px;
+	margin: 0;
 }
 h1, h6 {
 	text-align: center;
 }
+
+
+/* ==== Classes ==== */
 .number_div{
 	font-size: 60px;
 	text-align: center;
@@ -16,7 +22,14 @@ h1, h6 {
 	font-weight: bold;
 	text-align: center;
 }
+
+
+/* ==== IDs ==== */
 #battery_voltage, #panel_amps, #panel_volts {
+	font-weight: bold;
+}
+/* All stuff in nerd info*/
+#operating_mode, #ac_mode, #aux_mode, #charger_mode, #misc_mode, #warnings, #errors_fx, #errors_mx {
 	font-weight: bold;
 }
 #warnings, #errors_fx, #errors_mx {
@@ -24,15 +37,24 @@ h1, h6 {
 }
 #left_div{
 	width: 400px;
-    float: left;
-	/*float: left;*/
+	float: left;
+}
+#nerd_info{
+	padding-left: 10px;
+}
+#nerd_info h3 {
+	padding-left: 5px;
 }
 #right_div{
 	margin-left: 400px;
+	padding: 5px;
 }
 #chart_div{
-    /*margin-left: 25%;*/
 	background-color: #225fe0;
+	border: solid 5px #1c4fb7;
+	border-radius: 10px;
+	width: 800px;
+	height: 500px;
 }
 #bottom {
 	position: fixed;
