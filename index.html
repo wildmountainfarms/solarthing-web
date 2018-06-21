@@ -5,14 +5,33 @@
 		<link rel="stylesheet" type="text/css" href="./index.css">
 		<!--Init javascript libraries-->
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-		<!--<script src="http://solarthing:solarthing@192.168.10.250:5984/solarthing/_design/couchAppName/vendor/couchapp/loader.js"></script>-->
-		<!--<script src="https://cdn.jsdelivr.net/pouchdb/5.4.5/pouchdb.min.js"></script>-->
 		<!--<script src="http://192.168.10.250:5984/_utils/script/couch.js"></script>-->
-		<script src="http://192.168.10.250:5984/_utils/script/json2.js"></script>
-		<script src="http://192.168.10.250:5984/_utils/script/sha1.js"></script>
-		<script src="http://192.168.10.250:5984/_utils/script/jquery.js?1.4.2"></script>
-		<script src="http://192.168.10.250:5984/_utils/script/jquery.couch.js?0.11.0"></script>
-		<script src="http://192.168.10.250:5984/_utils/script/jquery.dialog.js?0.11.0"></script>
+
+		<!--<script src="http://192.168.10.250:5984/_utils/script/json2.js"></script>-->
+		<!--<script src="http://192.168.10.250:5984/_utils/script/sha1.js"></script>-->
+		<!--<script src="http://192.168.10.250:5984/_utils/script/jquery.js?1.4.2"></script>-->
+		<!--<script src="http://192.168.10.250:5984/_utils/script/jquery.couch.js?0.11.0"></script>-->
+		<!--<script src="http://192.168.10.250:5984/_utils/script/jquery.dialog.js?0.11.0"></script>-->
+		<script>
+			const SOUCES = [
+				"/_utils/script/json2.js", "/_utils/script/sha1.js", "/_utils/script/jquery.js?1.4.2",
+				"/_utils/script/jquery.couch.js?0.11.0", "/_utils/script/jquery.dialog.js?0.11.0"
+			];
+			let protocol = window.location.protocol;
+			console.log(protocol);
+			let hostname = window.location.hostname;
+			if(protocol === "file:"){ // if we are hosting this locally, go to correct server
+				protocol = "http:";
+				hostname = "192.168.10.250";
+			}
+			for(let i in SOUCES){
+				let source = SOUCES[i];
+				let fullSource = protocol + "//" + hostname + ":5984" + source;
+				console.log(fullSource);
+				document.write('<script src="' + fullSource + '">');
+				document.write("</" + "script>"); // to make intellij happy
+			}
+		</script>
 	</head>
 	<body>
 		<h1>Wild Mountain Farms Power Information</h1>
@@ -20,13 +39,13 @@
 			<div id="left_div">
 				<hr/>
 				<div class="number_heading">Current Battery Voltage</div>
-				<div class="number_div"><span id="battery_voltage">ERROR</span> Volts</div> <!--From FX Status-->
+				<div class="large_info"><span id="battery_voltage">ERROR</span> V</div> <!--From FX Status-->
 				<hr/>
 
 				<div class="number_heading">Solar Panel Status</div>
-				<div class="number_div"><span id="panel_watts">ERROR</span> Watts</div> <!--Calc From MXFM-->
-				<div class="number_div"><span id="panel_amps">ERROR</span> AMPs</div> <!--From MXFM-->
-				<div class="number_div"><span id="panel_volts">ERROR</span> Volts</div> <!--From MXFM-->
+				<div class="large_info"><span id="panel_watts">ERROR</span> W</div> <!--Calc From MXFM-->
+				<div class="medium_info"><span id="panel_amps">ERROR</span> AMPs</div> <!--From MXFM-->
+				<div class="medium_info"><span id="panel_volts">ERROR</span> V</div> <!--From MXFM-->
 				<hr/>
 				<div id="nerd_info">
 					<h3>Nerd Info</h3>
@@ -43,11 +62,9 @@
 						<br/>
 						Misc Modes: <span id="misc_mode"></span>
 						<br/>
-						Warnings (1): <span id="warnings_1"></span>
+						Warnings: <span id="warnings"></span>
 						<br/>
-						Warnings (2): <span id="warnings_2"></span>
-						<br/>
-						FX Errors (1 & 2): <span id="errors_fx"></span>
+						FX Errors: <span id="errors_fx"></span>
 						<br/>
 						MXFM Errors: <span id="errors_mx"></span>
 					</p>
@@ -55,11 +72,24 @@
 				<hr/>
 			</div>
 			<div id="right_div">
+				<hr/>
+				<div class="number_heading">Generator Status</div>
+				<div class="large_info"><span id="generator_status">ERROR</span></div>
+				<div class="medium_info">Total: <span id="generator_total_watts">ERROR</span> W</div>
+				<div class="medium_info">Charge: <span id="generator_charge_watts">ERROR</span> W</div>
+				<!--<hr/>-->
+				<!--<div class="medium_info"><span id="generator_volts">ERROR</span> V</div>-->
+				<!--<div class="medium_info">Total: <span id="generator_total_amps">ERROR</span> AMPS</div>-->
+				<!--<div class="medium_info">Charge: <span id="generator_charge_amps">ERROR</span> AMPS</div>-->
+				<hr/>
+
+			</div>
+			<div id="center_div">
 				<div id="chart_div"></div>
 			</div>
 		</section>
 		<div id="bottom">
-			<h6>Programmed by Josh with help from Dave</h6>
+			<h6>Programmed by Josh and Dave</h6>
 		</div>
 
 		<!--Run our javascript-->
