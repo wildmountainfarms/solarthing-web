@@ -5,7 +5,14 @@
 		<link rel="stylesheet" type="text/css" href="./index.css">
 		<!--Init javascript libraries-->
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-		<script src="http://127.0.0.1:5984/databaseName/_design/couchAppName/vendor/couchapp/loader.js"></script>
+		<!--<script src="http://solarthing:solarthing@192.168.10.250:5984/solarthing/_design/couchAppName/vendor/couchapp/loader.js"></script>-->
+		<!--<script src="https://cdn.jsdelivr.net/pouchdb/5.4.5/pouchdb.min.js"></script>-->
+		<!--<script src="http://192.168.10.250:5984/_utils/script/couch.js"></script>-->
+		<script src="http://192.168.10.250:5984/_utils/script/json2.js"></script>
+		<script src="http://192.168.10.250:5984/_utils/script/sha1.js"></script>
+		<script src="http://192.168.10.250:5984/_utils/script/jquery.js?1.4.2"></script>
+		<script src="http://192.168.10.250:5984/_utils/script/jquery.couch.js?0.11.0"></script>
+		<script src="http://192.168.10.250:5984/_utils/script/jquery.dialog.js?0.11.0"></script>
 	</head>
 	<body>
 		<h1>Wild Mountain Farms Power Information</h1>
@@ -17,12 +24,15 @@
 				<hr/>
 
 				<div class="number_heading">Solar Panel Status</div>
+				<div class="number_div"><span id="panel_watts">ERROR</span> Watts</div> <!--Calc From MXFM-->
 				<div class="number_div"><span id="panel_amps">ERROR</span> AMPs</div> <!--From MXFM-->
 				<div class="number_div"><span id="panel_volts">ERROR</span> Volts</div> <!--From MXFM-->
 				<hr/>
 				<div id="nerd_info">
 					<h3>Nerd Info</h3>
 					<p>
+						Devices Info: <span id="packets_info">unknown</span>
+						<br/>
 						Operating Mode: <span id="operating_mode">unknown</span>
 						<br/>
 						AC Mode: <span id="ac_mode">unknown</span>
@@ -33,9 +43,11 @@
 						<br/>
 						Misc Modes: <span id="misc_mode"></span>
 						<br/>
-						Warnings: <span id="warnings"></span>
+						Warnings (1): <span id="warnings_1"></span>
 						<br/>
-						FX Errors: <span id="errors_fx"></span>
+						Warnings (2): <span id="warnings_2"></span>
+						<br/>
+						FX Errors (1 & 2): <span id="errors_fx"></span>
 						<br/>
 						MXFM Errors: <span id="errors_mx"></span>
 					</p>

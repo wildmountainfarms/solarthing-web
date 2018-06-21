@@ -29,7 +29,7 @@ h1, h6 {
 	font-weight: bold;
 }
 /* All stuff in nerd info*/
-#operating_mode, #ac_mode, #aux_mode, #charger_mode, #misc_mode, #warnings, #errors_fx, #errors_mx {
+#packets_info, #operating_mode, #ac_mode, #aux_mode, #charger_mode, #misc_mode, #warnings, #errors_fx, #errors_mx {
 	font-weight: bold;
 }
 #warnings, #errors_fx, #errors_mx {
@@ -50,7 +50,7 @@ h1, h6 {
 	padding: 5px;
 }
 #chart_div{
-	background-color: #225fe0;
+	/*background-color: look in index.js ;*/
 	border: solid 5px #1c4fb7;
 	border-radius: 10px;
 	width: 800px;
