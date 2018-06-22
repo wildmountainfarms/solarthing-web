@@ -36,61 +36,60 @@
 	<body>
 		<h1>Wild Mountain Farms Power Information</h1>
 		<section style="width:100%">
-			<div id="left_div">
-				<hr/>
-				<div class="number_heading">Current Battery Voltage</div>
-				<div class="large_info"><span id="battery_voltage">ERROR</span> V</div> <!--From FX Status-->
-				<hr/>
+			<hr/>
+			<div class="number_heading">Current Battery Voltage</div>
+			<div class="large_info"><span id="battery_voltage">ERROR</span> V</div> <!--From FX Status-->
 
-				<div class="number_heading">Solar Panel Status</div>
-				<div class="large_info"><span id="panel_watts">ERROR</span> W</div> <!--Calc From MXFM-->
-				<div class="medium_info"><span id="panel_amps">ERROR</span> AMPs</div> <!--From MXFM-->
-				<div class="medium_info"><span id="panel_volts">ERROR</span> V</div> <!--From MXFM-->
-				<hr/>
-				<div id="nerd_info">
-					<h3>Nerd Info</h3>
-					<p>
-						Devices Info: <span id="packets_info">unknown</span>
-						<br/>
-						Operating Mode: <span id="operating_mode">unknown</span>
-						<br/>
-						AC Mode: <span id="ac_mode">unknown</span>
-						<br/>
-						Aux Mode: <span id="aux_mode">unknown</span>
-						<br/>
-						Charger Mode: <span id="charger_mode">unknown</span>
-						<br/>
-						Misc Modes: <span id="misc_mode"></span>
-						<br/>
-						Warnings: <span id="warnings"></span>
-						<br/>
-						FX Errors: <span id="errors_fx"></span>
-						<br/>
-						MXFM Errors: <span id="errors_mx"></span>
-					</p>
-				</div>
-				<hr/>
-			</div>
-			<div id="right_div">
-				<hr/>
-				<div class="number_heading">Generator Status</div>
-				<div class="large_info"><span id="generator_status">ERROR</span></div>
-				<div class="medium_info">Total: <span id="generator_total_watts">ERROR</span> W</div>
-				<div class="medium_info">Charge: <span id="generator_charge_watts">ERROR</span> W</div>
-				<!--<hr/>-->
-				<!--<div class="medium_info"><span id="generator_volts">ERROR</span> V</div>-->
-				<!--<div class="medium_info">Total: <span id="generator_total_amps">ERROR</span> AMPS</div>-->
-				<!--<div class="medium_info">Charge: <span id="generator_charge_amps">ERROR</span> AMPS</div>-->
-				<hr/>
+			<hr/>
+			<div class="number_heading">Solar Panel Status</div>
+			<div class="large_info"><span id="panel_watts">ERROR</span> W</div> <!--Calc From MXFM-->
+			<div class="medium_info"><span id="panel_amps">ERROR</span> AMPs</div> <!--From MXFM-->
+			<div class="medium_info"><span id="panel_volts">ERROR</span> V</div> <!--From MXFM-->
 
+			<hr/>
+			<div class="number_heading">Generator Status</div>
+			<div class="large_info"><span id="generator_status">ERROR</span></div>
+			<div class="medium_info">Total: <span id="generator_total_watts">ERROR</span> W</div>
+			<div class="medium_info">Charge: <span id="generator_charge_watts">ERROR</span> W</div>
+
+			<hr/>
+			<div id="chart_div"></div>
+			<div style="text-align:center;">
+				<button type="button" onclick="toggleHours()" id="hours_toggle">24</button>
 			</div>
-			<div id="center_div">
-				<div id="chart_div"></div>
+
+			<hr/>
+			<div id="nerd_info">
+				<h3>Nerd Info</h3>
+				<p>
+					Devices Info: <span id="packets_info">unknown</span>
+					<br/>
+					Operating Mode: <span id="operating_mode">unknown</span>
+					<br/>
+					AC Mode: <span id="ac_mode">unknown</span>
+					<br/>
+					Aux Mode: <span id="aux_mode">unknown</span>
+					<br/>
+					Charger Mode: <span id="charger_mode">unknown</span>
+					<br/>
+					Misc Modes: <span id="misc_mode"></span>
+					<br/>
+					Warnings: <span id="warnings"></span>
+					<br/>
+					FX Errors: <span id="errors_fx"></span>
+					<br/>
+					MXFM Errors: <span id="errors_mx"></span>
+				</p>
 			</div>
+			<!--<hr/>-->
+			<!--<div class="medium_info"><span id="generator_volts">ERROR</span> V</div>-->
+			<!--<div class="medium_info">Total: <span id="generator_total_amps">ERROR</span> AMPS</div>-->
+			<!--<div class="medium_info">Charge: <span id="generator_charge_amps">ERROR</span> AMPS</div>-->
 		</section>
-		<div id="bottom">
-			<h6>Programmed by Josh and Dave</h6>
-		</div>
+		<!--<div id="bottom">-->
+			<!--<h6>Programmed by Josh and Dave</h6>-->
+		<!--</div>-->
+		<h6>Programmed by Josh and Dave</h6>
 
 		<!--Run our javascript-->
 		<script src="./index.js"></script>

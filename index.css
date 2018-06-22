@@ -39,35 +39,26 @@ h1, h6 {
 #warnings, #errors_fx, #errors_mx {
 	color: #FF0000;
 }
-#left_div{
-	width: 400px;
-	float: left;
-}
 #nerd_info{
 	padding-left: 10px;
 }
 #nerd_info h3 {
 	padding-left: 5px;
 }
-#center_div{
-	margin-left: 400px;
-	margin-right: 400px;
-	padding: 10px;
-}
 #chart_div{
 	/*background-color: look in index.js ;*/
 	border: solid 5px #1c4fb7;
 	border-radius: 10px;
+	margin: 10px;
 	/*width: 800px;*/
-	width: 100%; /* 100% of right div*/
 	height: 500px;
 }
-#right_div{
-	width: 400px;
-	float: right;
+#hours_toggle{
+	width: 200px;
+	height: 40px;
 }
-#bottom {
-	position: fixed;
-    bottom: 0;
-    width: 100%;
-}
+/*#bottom {*/
+	/*position: fixed;*/
+    /*bottom: 0;*/
+    /*width: 100%;*/
+/*}*/

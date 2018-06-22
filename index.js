@@ -3,10 +3,14 @@ google.charts.load('current', {packages: ['corechart', 'line']});
 google.charts.setOnLoadCallback(drawLogScales);
 // TODO Possibly use this in future: https://stackoverflow.com/a/14521482/5434860 + prompt("enter ip", "default ip") for couchdb
 
-const DATABASE_URL = "http://192.168.10.250:5984/solarthing";
+const DATABASE_URL = window.location.protocol === "file:" ?
+	"http://192.168.10.250:5984/solarthing" :
+	window.location.protocol + "//" +  window.location.hostname + ":5984/solarthing";
 const DESIGN = "/_design";
 const VIEW = "/_view";
 let graphOptions;
+let desiredLastHours = null;
+let graphUpdateTimeoutID = null;
 
 // let db = null;
 // let localDB = new window.PouchDB("localDB");
@@ -105,6 +109,24 @@ graphOptions = {
 	},
 	chartArea: { width: "70%", height:200}
 };
+function toggleHours() {
+	let firstRun = desiredLastHours == null; // is this just to initiailze and not to call drawLogScales()
+	let element = document.getElementById("hours_toggle");
+	let last = desiredLastHours;
+	if (desiredLastHours === 2) {
+		desiredLastHours = 24;
+	} else {
+		desiredLastHours = 2;
+	}
+	if (!last) {
+		last = 24;
+	}
+	element.innerText = "Change to " + last + " hours";
+	if(!firstRun) {
+		clearTimeout(graphUpdateTimeoutID);
+		drawLogScales();
+	}
+}
 
 function drawLogScales() {
 	// console.log("drawing log scales");
@@ -116,7 +138,8 @@ function drawLogScales() {
 	data.addColumn('number', "Gen W -> Battery");
 	data.addColumn('number', "Gen W (Total)");
 	try {
-		getJsonDataLastHours(2, function (jsonData) {
+		const lastHours = desiredLastHours;
+		getJsonDataLastHours(lastHours, function (jsonData) {
 			updateCurrent(getLastPacketCollectionFromJsonData(jsonData));
 			let rows = getGraphDataFromPacketCollectionArray(jsonData.rows);
 			// console.log(rows);
@@ -124,13 +147,13 @@ function drawLogScales() {
 			let chart = new google.visualization.LineChart(element);
 			// credit to: https://stackoverflow.com/a/171256/5434860
 			// chart.draw(data, {...graphOptions, ...{title: "Last 2 Hours"}});
-			let newOptions = Object.assign({}, graphOptions, {title: "Last 2 Hours"});
+			let newOptions = Object.assign({}, graphOptions, {title: "Last " + lastHours + " Hours"});
 			chart.draw(data, newOptions);
 			setTimeout(drawLogScales, 12000);
 			// console.log("done updating data. Rescheduling.");
 		}, function(){
 			console.log("got error, trying again in 3 seconds");
-			setTimeout(drawLogScales, 3000);
+			graphUpdateTimeoutID = setTimeout(drawLogScales, 3000);
 		});
 	} catch(ex){
 		console.error(ex);
@@ -169,9 +192,9 @@ function updateCurrent(lastPacketCollection){
 	for(let packetIndexKey in lastPacketCollection.packets){
 		let packet = lastPacketCollection.packets[packetIndexKey];
 		let packetType = packet.packetType;
-		let address;
+		let address = packet.address;
 		if(packetType === "FX_STATUS"){
-			address = packet.inverterAddress;
+			// address = packet.inverterAddress;
 			let batteryVoltage = packet.batteryVoltage;
 			setBatteryVoltage(batteryVoltage);
 
@@ -190,7 +213,7 @@ function updateCurrent(lastPacketCollection){
 			chargeWattsFromGenerator += packet.inputVoltage * packet.chargerCurrent;
 			totalWattsFromGenerator += packet.inputVoltage * packet.buyCurrent;
 		} else if(packetType === "MXFM_STATUS"){
-			address = packet.address;
+			// address = packet.address;
 			let amps = packet.pvCurrent;
 			let volts = packet.inputVoltage;
 			setPanelAmpsVolts(amps, volts);
@@ -220,7 +243,7 @@ function updateCurrent(lastPacketCollection){
 	setIDText("errors_fx", getDictString(errorsFXDict));
 	setIDText("errors_mx", getDictString(errorsMXDict));
 	//
-	setIDText("generator_status", totalWattsFromGenerator == 0 ? "OFF" : "ON");
+	setIDText("generator_status", totalWattsFromGenerator === 0 ? "OFF" : "ON");
 	setIDText("generator_total_watts", totalWattsFromGenerator);
 	setIDText("generator_charge_watts", chargeWattsFromGenerator);
 }
@@ -264,7 +287,7 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 		}
 		// if(graphData[0][1] % 5 === 0) { // only add data from 5 minute intervals
 		if(!graphData[4]) { // don't draw generator voltage line unless it's in use
-			if (lastData && lastData[4]) { // if the
+			if (!lastData || !lastData[4]) { // set to null only if the there wasn't lastData or if it was 0 or null
 				graphData[4] = null;
 				graphData[3] = null;
 			}
@@ -285,6 +308,9 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
  */
 function getJsonDataLastHours(lastHours, onSuccessFunction, onFailFunction=null){
 	let date = new Date();
+	date.setSeconds(0);
+	date.setMilliseconds(0);
+
 	date.setMinutes(Math.floor(date.getMinutes() / 5.0) * 5);
 	date.setHours(date.getHours() - lastHours);
 	getJsonDataSince(date, onSuccessFunction, onFailFunction);
@@ -355,6 +381,9 @@ function getJsonObjectFromUrl(urlString) {
 function main(){
 	setBatteryVoltage(null);
 	setPanelAmpsVolts(null, null);
-	setIDText("generator_status", null);
+	setIDText("generator_status", "?");
+	setIDText("generator_total_watts", "?");
+	setIDText("generator_charge_watts", "?");
+	toggleHours();
 }
 main();
