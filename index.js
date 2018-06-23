@@ -8,6 +8,7 @@ const DATABASE_URL = window.location.protocol === "file:" ?
 	window.location.protocol + "//" +  window.location.hostname + ":5984/solarthing";
 const DESIGN = "/_design";
 const VIEW = "/_view";
+
 let graphOptions;
 let desiredLastHours = null;
 let graphUpdateTimeoutID = null;
@@ -44,7 +45,10 @@ graphOptions = {
 		},
 		3: {
 			targetAxisIndex: 1
-		}
+		},
+		4: {
+			targetAxisIndex: 1
+		},
 	},
 	hAxis: {
 		title: 'Time',
@@ -60,6 +64,7 @@ graphOptions = {
 	vAxes: {
 		0: {
 			title: 'Voltage',
+			titleTextStyle: { color: "#FF0000" },
 			viewWindowMode: "explicit",
 			viewWindow: {
 				max: 30,
@@ -130,34 +135,35 @@ function toggleHours() {
 
 function drawLogScales() {
 	// console.log("drawing log scales");
-	let element = document.getElementById("chart_div");
-	let data = new google.visualization.DataTable();
-	data.addColumn('timeofday', 'X');
-	data.addColumn('number', 'Battery V');
-	data.addColumn('number', 'Panel W');
-	data.addColumn('number', "Gen W -> Battery");
-	data.addColumn('number', "Gen W (Total)");
-	try {
-		const lastHours = desiredLastHours;
-		getJsonDataLastHours(lastHours, function (jsonData) {
-			updateCurrent(getLastPacketCollectionFromJsonData(jsonData));
-			let rows = getGraphDataFromPacketCollectionArray(jsonData.rows);
-			// console.log(rows);
-			data.addRows(rows);
-			let chart = new google.visualization.LineChart(element);
-			// credit to: https://stackoverflow.com/a/171256/5434860
-			// chart.draw(data, {...graphOptions, ...{title: "Last 2 Hours"}});
-			let newOptions = Object.assign({}, graphOptions, {title: "Last " + lastHours + " Hours"});
-			chart.draw(data, newOptions);
-			setTimeout(drawLogScales, 12000);
-			// console.log("done updating data. Rescheduling.");
-		}, function(){
-			console.log("got error, trying again in 3 seconds");
-			graphUpdateTimeoutID = setTimeout(drawLogScales, 3000);
-		});
-	} catch(ex){
-		console.error(ex);
-	}
+	const element = document.getElementById("chart_div");
+	const lastHours = desiredLastHours;
+	getJsonDataLastHours(lastHours, function (jsonData) {
+		updateCurrent(getLastPacketCollectionFromJsonData(jsonData));
+
+		element.innerHTML = "";
+
+		let usedGraphData = updateGraphData(jsonData);
+		let chart = new google.visualization.LineChart(element);
+		let newOptions = Object.assign({}, graphOptions, {title: "Last " + lastHours + " Hours"});
+		chart.draw(usedGraphData, newOptions);
+		graphUpdateTimeoutID = setTimeout(drawLogScales, 12000);
+	}, function(){
+		console.log("got error, trying again in 3 seconds");
+		graphUpdateTimeoutID = setTimeout(drawLogScales, 3000);
+	});
+}
+function updateGraphData(jsonData){
+	let graphData = new google.visualization.DataTable();
+	graphData.addColumn('timeofday', 'X');
+	graphData.addColumn('number', 'Battery V');
+	graphData.addColumn('number', 'Panel W');
+	graphData.addColumn('number', "Load W");
+	graphData.addColumn('number', "Gen W -> Battery");
+	graphData.addColumn('number', "Gen W (Total)");
+
+	let rows = getGraphDataFromPacketCollectionArray(jsonData.rows);
+	graphData.addRows(rows);
+	return graphData;
 }
 function updateCurrent(lastPacketCollection){
 	function getDictString(dict){
@@ -173,7 +179,7 @@ function updateCurrent(lastPacketCollection){
 		}
 		return r;
 	}
-	console.log("updating now. dateArray: " + lastPacketCollection.dateArray);
+	// console.log("updating now. dateArray: " + lastPacketCollection.dateArray);
 	let deviceInfo = "";
 	let acModeDict = {};
 	let operatingModeDict = {};
@@ -185,12 +191,14 @@ function updateCurrent(lastPacketCollection){
 	let auxModeDict = {};
 	let chargerModeDict = {};
 
+	let load = 0;
+
 	let chargeWattsFromGenerator = 0;
 	let totalWattsFromGenerator = 0;
 
 
-	for(let packetIndexKey in lastPacketCollection.packets){
-		let packet = lastPacketCollection.packets[packetIndexKey];
+	for(let i in lastPacketCollection.packets){
+		let packet = lastPacketCollection.packets[i];
 		let packetType = packet.packetType;
 		let address = packet.address;
 		if(packetType === "FX_STATUS"){
@@ -209,6 +217,8 @@ function updateCurrent(lastPacketCollection){
 			errorsFXDict[address] = errors;
 			miscModesDict[address] = miscModes;
 			warningsDict[address] = warnings;
+
+			load += packet.outputVoltage * packet.inverterCurrent;
 
 			chargeWattsFromGenerator += packet.inputVoltage * packet.chargerCurrent;
 			totalWattsFromGenerator += packet.inputVoltage * packet.buyCurrent;
@@ -243,6 +253,8 @@ function updateCurrent(lastPacketCollection){
 	setIDText("errors_fx", getDictString(errorsFXDict));
 	setIDText("errors_mx", getDictString(errorsMXDict));
 	//
+	setIDText("load", load);
+	//
 	setIDText("generator_status", totalWattsFromGenerator === 0 ? "OFF" : "ON");
 	setIDText("generator_total_watts", totalWattsFromGenerator);
 	setIDText("generator_charge_watts", chargeWattsFromGenerator);
@@ -254,24 +266,24 @@ function getLastPacketCollectionFromJsonData(jsonData){
 
 function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 	let r = [];
-	for(let indexKey in packetCollectionArray){
-		let packetCollection = packetCollectionArray[indexKey].value;
+	for(let i in packetCollectionArray){
+		let packetCollection = packetCollectionArray[i].value;
 		let dateArray = packetCollection.dateArray;
 		// console.log(dateArray);
-		let graphData = [[dateArray[3], dateArray[4], 0], null, null, 0, 0];
-		//           <        date     >, <battery volt>, <solar panel>, <generator to batteries>, <total from generator>
-		// for(let packetIndexKey in packetCollection.packets){
-		// 	let packet = packetCollection.packets[packetIndexKey].value;
+		// some set to 0 because we want to do +=, otherwise set to null
+		let graphData = [[dateArray[3], dateArray[4], 0], 0, null, null, 0, 0];
+		//           <        date     >, <battery volt>, <solar panel>, <load>, <generator to batteries>, <total from generator>
 		// console.log(packetCollection.packets);
-		for(let packetIndexKey in packetCollection.packets){
-			let packet = packetCollection.packets[packetIndexKey];
+		for(let j in packetCollection.packets){
+			let packet = packetCollection.packets[j];
 			// console.log(packet);
 			let packetType = packet.packetType;
 			// console.log(packetType);
 			if(packetType === "FX_STATUS"){
 				graphData[1] = packet.batteryVoltage;
-				graphData[3] += packet.inputVoltage * packet.chargerCurrent;
-				graphData[4] += packet.inputVoltage * packet.buyCurrent;
+				graphData[3] += packet.outputVoltage * packet.inverterCurrent;
+				graphData[4] += packet.inputVoltage * packet.chargerCurrent;
+				graphData[5] += packet.inputVoltage * packet.buyCurrent;
 			} else if(packetType === "MXFM_STATUS"){
 				let amps = packet.pvCurrent;
 				let volts = packet.inputVoltage;
@@ -286,15 +298,15 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 			lastData = r[r.length - 1];
 		}
 		// if(graphData[0][1] % 5 === 0) { // only add data from 5 minute intervals
-		if(!graphData[4]) { // don't draw generator voltage line unless it's in use
+		if(!graphData[5]) { // don't draw generator voltage line unless it's in use
 			if (!lastData || !lastData[4]) { // set to null only if the there wasn't lastData or if it was 0 or null
+				graphData[5] = null;
 				graphData[4] = null;
-				graphData[3] = null;
 			}
 		} else if(lastData){
-			if(!lastData[4]){ // if the last generator voltage is null (or 0) set to 0 to make sure line is drawn
+			if(!lastData[5]){ // if the last generator voltage is null (or 0) set to 0 to make sure line is drawn
+				lastData[5] = 0;
 				lastData[4] = 0;
-				lastData[3] = 0;
 			}
 		}
 		r.push(graphData);
@@ -384,6 +396,7 @@ function main(){
 	setIDText("generator_status", "?");
 	setIDText("generator_total_watts", "?");
 	setIDText("generator_charge_watts", "?");
+	setIDText("load", "?");
 	toggleHours();
 }
 main();
