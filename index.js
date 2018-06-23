@@ -53,7 +53,7 @@ graphOptions = {
 	hAxis: {
 		title: 'Time',
 		logScale: false,
-		format: "hh:mm a",
+		// format: "hh:mm a",
 		textStyle: { color: "#000000" },
 		titleTextStyle: { color: "#000000" },
 		gridlines: {
@@ -105,10 +105,11 @@ graphOptions = {
 	colors: [ // colors used by the lines
 		'#a52714',
 		'#639f1f',
+		'#ff1ff3',
 		'#674d1b',
 		'#a29d00',
 	],
-	backgroundColor: "#225fe0",
+	backgroundColor: "#215fe0",
 	legend: {
 		textStyle: { color: "#000000" }
 	},
@@ -154,7 +155,7 @@ function drawLogScales() {
 }
 function updateGraphData(jsonData){
 	let graphData = new google.visualization.DataTable();
-	graphData.addColumn('timeofday', 'X');
+	graphData.addColumn('datetime', 'X');
 	graphData.addColumn('number', 'Battery V');
 	graphData.addColumn('number', 'Panel W');
 	graphData.addColumn('number', "Load W");
@@ -271,7 +272,8 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 		let dateArray = packetCollection.dateArray;
 		// console.log(dateArray);
 		// some set to 0 because we want to do +=, otherwise set to null
-		let graphData = [[dateArray[3], dateArray[4], 0], 0, null, null, 0, 0];
+		let date = new Date(dateArray[0], dateArray[1], dateArray[2], dateArray[3], dateArray[4], dateArray[5]);
+		let graphData = [date, 0, null, null, 0, 0];
 		//           <        date     >, <battery volt>, <solar panel>, <load>, <generator to batteries>, <total from generator>
 		// console.log(packetCollection.packets);
 		for(let j in packetCollection.packets){
@@ -324,7 +326,7 @@ function getJsonDataLastHours(lastHours, onSuccessFunction, onFailFunction=null)
 	date.setMilliseconds(0);
 
 	date.setMinutes(Math.floor(date.getMinutes() / 5.0) * 5);
-	date.setHours(date.getHours() - lastHours);
+	date.setTime(date.getTime() - lastHours * 60 * 60 * 1000);
 	getJsonDataSince(date, onSuccessFunction, onFailFunction);
 }
 function getJsonDataSince(date, onSuccessFunction, onFailFunction=null){
