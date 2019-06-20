@@ -1,34 +1,26 @@
 'use strict';
 google.charts.load('current', {packages: ['corechart', 'line']});
-google.charts.setOnLoadCallback(drawLogScales);
+google.charts.setOnLoadCallback(function(){
+	console.log("got callback");
+	console.log("$: " + $);
+	drawLogScales();
+	updateOuthouse()
+});
 // TODO Possibly use this in future: https://stackoverflow.com/a/14521482/5434860 + prompt("enter ip", "default ip") for couchdb
 
 const DATABASE_URL = window.location.protocol === "file:" ?
-	"http://192.168.10.250:5984/solarthing" :
-	window.location.protocol + "//" +  window.location.hostname + ":5984/solarthing";
+	"http://192.168.10.250:5984" :
+	window.location.protocol + "//" +  window.location.hostname + ":5984";
+const SOLAR_DB = "/solarthing";
+const OUTHOUSE_DB = "/outhouse"
 const DESIGN = "/_design";
 const VIEW = "/_view";
 
-let graphOptions;
 let desiredLastHours = null;
 let graphUpdateTimeoutID = null;
+let outhouseUpdateTimeoutID = null;
 
-// let db = null;
-// let localDB = new window.PouchDB("localDB");
-// let remoteDB;
-// remoteDB = new window.PouchDB("http://192.168.10.250:5984/solarthing")
-// localDB.sync(remoteDB, {live: true})
-
-// try{
-// 	$.couch.urlPrefix = "http://192.168.10.250:5984";
-// 	db = $.couch.db("solarthing");
-// 	console.log(db);
-// 	console.log("Successfully initialized the couchdb");
-// } catch(err){
-// 	console.error(err);
-// 	console.log("unable to initialize database. That's not very relaxing!");
-// }
-graphOptions = {
+const graphOptions = {
 	// title: "Cool Title",
 	titleTextStyle: {
 		color: "#000000"
@@ -170,8 +162,8 @@ function updateCurrent(lastPacketCollection){
 	function getDictString(dict){
 		let r = "";
 		let isFirst = true;
-		for(let key in dict){
-			let value = dict[key];
+		for(const key in dict){
+			const value = dict[key];
 			if(!isFirst){
 				r += "|";
 			}
@@ -182,15 +174,15 @@ function updateCurrent(lastPacketCollection){
 	}
 	// console.log("updating now. dateArray: " + lastPacketCollection.dateArray);
 	let deviceInfo = "";
-	let acModeDict = {};
-	let operatingModeDict = {};
-	let errorsFXDict = {};
-	let miscModesDict = {};
-	let warningsDict = {};
+	const acModeDict = {};
+	const operatingModeDict = {};
+	const errorsFXDict = {};
+	const miscModesDict = {};
+	const warningsDict = {};
 
-	let errorsMXDict = {};
-	let auxModeDict = {};
-	let chargerModeDict = {};
+	const errorsMXDict = {};
+	const auxModeDict = {};
+	const chargerModeDict = {};
 
 	let load = 0;
 
@@ -198,8 +190,7 @@ function updateCurrent(lastPacketCollection){
 	let totalWattsFromGenerator = 0;
 
 
-	for(let i in lastPacketCollection.packets){
-		let packet = lastPacketCollection.packets[i];
+	for(const packet of lastPacketCollection.packets){
 		let packetType = packet.packetType;
 		let address = packet.address;
 		if(packetType === "FX_STATUS"){
@@ -267,8 +258,7 @@ function getLastPacketCollectionFromJsonData(jsonData){
 
 function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 	let r = [];
-	for(let i in packetCollectionArray){
-		let packetCollection = packetCollectionArray[i].value;
+	for(const packetCollection of packetCollectionArray){
 		let dateArray = packetCollection.dateArray;
 		// console.log(dateArray);
 		// some set to 0 because we want to do +=, otherwise set to null
@@ -315,10 +305,12 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 	}
 	return r;
 }
+
 /**
  * @param lastHours The amount of hours back to get data from that time to the current time
  * @param onSuccessFunction A function that will be passed a parameter with the desired rows of data ->
  *          Array for the last lastHours hours(2D array where each sub array has a length of 3)
+ * @param onFailFunction The function to be called if it fails or null
  */
 function getJsonDataLastHours(lastHours, onSuccessFunction, onFailFunction=null){
 	let date = new Date();
@@ -332,7 +324,7 @@ function getJsonDataLastHours(lastHours, onSuccessFunction, onFailFunction=null)
 function getJsonDataSince(date, onSuccessFunction, onFailFunction=null){
 
 	let minMillis = date.getTime();
-	getJsonDataFromUrl(DATABASE_URL + DESIGN + "/packets" + VIEW + "/millis" + "?startkey=" + minMillis, onSuccessFunction, onFailFunction);
+	getJsonDataFromUrl(DATABASE_URL + SOLAR_DB + DESIGN + "/packets" + VIEW + "/millis" + "?startkey=" + minMillis, onSuccessFunction, onFailFunction);
 
 }
 function getJsonDataFromUrl(urlString, onSuccessFunction, onFailFunction=null){
@@ -391,6 +383,53 @@ function getJsonObjectFromUrl(urlString) {
     return $.getJSON(urlString);
 }
 
+function updateOuthouse() {
+    const minMillis = new Date().getTime() - 5 * 60 * 1000;
+	getJsonDataFromUrl(DATABASE_URL + OUTHOUSE_DB + DESIGN + "/packets" + VIEW + "/millis" + "?startkey=" + minMillis, function(jsonData){
+		console.log(jsonData);
+		const packetCollections = jsonData.rows;
+		let minDate = 0;
+		let newestCollection = null;
+		for(const packetCollection of packetCollections){
+			console.log(packetCollection);
+			const dateMillis = packetCollection.value.dateMillis;
+			if(dateMillis > minDate){
+				newestCollection = packetCollection.value;
+				minDate = dateMillis;
+			}
+		}
+		if(newestCollection != null){
+			console.log("newestCollection:");
+			console.log(newestCollection);
+			let occupied = false;
+			let temperatureCelsius = null;
+			let humidity = null;
+			for(const packet of newestCollection.packets){
+				if(packet.packetType === "OCCUPANCY"){
+					occupied = packet.occupancy === 1
+				} else if(packet.packetType === "WEATHER"){
+					temperatureCelsius = packet.temperatureCelsius;
+					humidity = packet.humidityPercent;
+				} else {
+					console.error("unknown packetType: " + packet.packetType);
+				}
+			}
+			setIDText("occupancy", occupied ? "occupied" : "vacant");
+			setIDText("temperature_f", temperatureCelsius == null ? "?" : toF(temperatureCelsius));
+			setIDText("humidity", humidity == null ? "?" : humidity)
+		} else {
+			console.log("no outhouse packets");
+		}
+		outhouseUpdateTimeoutID = setTimeout(updateOuthouse, 12000);
+	}, function(){
+		console.log("got error, trying again in 3 seconds");
+		outhouseUpdateTimeoutID = setTimeout(updateOuthouse, 3000);
+	});
+}
+function toF(celsius){
+	return celsius * 1.8 + 32;
+}
+
 
 function main(){
 	setBatteryVoltage(null);
@@ -400,5 +439,9 @@ function main(){
 	setIDText("generator_charge_watts", "?");
 	setIDText("load", "?");
 	toggleHours();
+
+	setIDText("occupancy", "?");
+	setIDText("temperature_f", "?");
+	setIDText("humidity", "?");
 }
 main();

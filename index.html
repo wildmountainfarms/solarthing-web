@@ -7,27 +7,21 @@
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<!--<script src="http://192.168.10.250:5984/_utils/script/couch.js"></script>-->
 
-		<!--<script src="http://192.168.10.250:5984/_utils/script/json2.js"></script>-->
-		<!--<script src="http://192.168.10.250:5984/_utils/script/sha1.js"></script>-->
-		<!--<script src="http://192.168.10.250:5984/_utils/script/jquery.js?1.4.2"></script>-->
-		<!--<script src="http://192.168.10.250:5984/_utils/script/jquery.couch.js?0.11.0"></script>-->
-		<!--<script src="http://192.168.10.250:5984/_utils/script/jquery.dialog.js?0.11.0"></script>-->
 		<script>
 			const SOUCES = [
 				"/_utils/script/json2.js", "/_utils/script/sha1.js", "/_utils/script/jquery.js?1.4.2",
 				"/_utils/script/jquery.couch.js?0.11.0", "/_utils/script/jquery.dialog.js?0.11.0"
 			];
 			let protocol = window.location.protocol;
-			console.log(protocol);
+			console.log("protocol: " + protocol);
 			let hostname = window.location.hostname;
 			if(protocol === "file:"){ // if we are hosting this locally, go to correct server
 				protocol = "http:";
 				hostname = "192.168.10.250";
 			}
-			for(let i in SOUCES){
-				let source = SOUCES[i];
+			for(const source of SOUCES){
 				let fullSource = protocol + "//" + hostname + ":5984" + source;
-				console.log(fullSource);
+				console.log("loading: " + fullSource);
 				document.write('<script src="' + fullSource + '">');
 				document.write("</" + "script>"); // to make intellij happy
 			}
@@ -61,6 +55,11 @@
 			<div style="text-align:center;">
 				<button type="button" onclick="toggleHours()" id="hours_toggle">24</button>
 			</div>
+
+            <hr/>
+			<div class="number_heading">Outhouse Occupancy</div>
+			<div class="large_info"><span id="occupancy">ERROR</span></div>
+            <div class="medium_info"><span id="temperature_f">ERROR</span> (F) | Humidity: <span id="humidity">ERROR</span>%</div>
 
 			<hr/>
 			<div id="nerd_info">
