@@ -258,7 +258,8 @@ function getLastPacketCollectionFromJsonData(jsonData){
 
 function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 	let r = [];
-	for(const packetCollection of packetCollectionArray){
+	for(const packetCollectionValue of packetCollectionArray){
+		const packetCollection = packetCollectionValue.value;
 		let dateArray = packetCollection.dateArray;
 		// console.log(dateArray);
 		// some set to 0 because we want to do +=, otherwise set to null
@@ -390,11 +391,11 @@ function updateOuthouse() {
 		const packetCollections = jsonData.rows;
 		let minDate = 0;
 		let newestCollection = null;
-		for(const packetCollection of packetCollections){
-			console.log(packetCollection);
-			const dateMillis = packetCollection.value.dateMillis;
+		for(const packetCollectionValue of packetCollections){
+			const packetCollection = packetCollectionValue.value
+			const dateMillis = packetCollection.dateMillis;
 			if(dateMillis > minDate){
-				newestCollection = packetCollection.value;
+				newestCollection = packetCollection;
 				minDate = dateMillis;
 			}
 		}
