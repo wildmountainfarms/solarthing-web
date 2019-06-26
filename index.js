@@ -190,6 +190,8 @@ function updateCurrent(lastPacketCollection){
 	let totalWattsFromGenerator = 0;
 
 
+	let pvWatts = 0;
+	let chargerWatts = 0;
 	for(const packet of lastPacketCollection.packets){
 		let packetType = packet.packetType;
 		let address = packet.address;
@@ -216,13 +218,12 @@ function updateCurrent(lastPacketCollection){
 			totalWattsFromGenerator += packet.inputVoltage * packet.buyCurrent;
 		} else if(packetType === "MXFM_STATUS"){
 			// address = packet.address;
-			let amps = packet.pvCurrent;
-			let volts = packet.inputVoltage;
-			setPanelAmpsVolts(amps, volts);
+			pvWatts += packet.pvCurrent * packet.inputVoltage;
+			chargerWatts += packet.chargerCurrent * packet.batteryVoltage;
 
-			let errors = packet.errors;
-			let auxMode = packet.auxModeName;
-			let chargerMode = packet.chargerModeName;
+			const errors = packet.errors;
+			const auxMode = packet.auxModeName;
+			const chargerMode = packet.chargerModeName;
 			errorsMXDict[address] = errors;
 			auxModeDict[address] = auxMode;
 			chargerModeDict[address] = chargerMode;
@@ -235,6 +236,7 @@ function updateCurrent(lastPacketCollection){
 		let splitPacketType = packetType.split("_");
 		deviceInfo += address + ":" + splitPacketType[0];
 	}
+	setPVAndCharger(pvWatts, chargerWatts);
 	setIDText("packets_info", deviceInfo);
 	setIDText("operating_mode", getDictString(operatingModeDict));
 	setIDText("ac_mode", getDictString(acModeDict));
@@ -260,28 +262,24 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 	let r = [];
 	for(const packetCollectionValue of packetCollectionArray){
 		const packetCollection = packetCollectionValue.value;
-		let dateArray = packetCollection.dateArray;
-		// console.log(dateArray);
+		const dateArray = packetCollection.dateArray;
 		// some set to 0 because we want to do +=, otherwise set to null
-		let date = new Date(dateArray[0], dateArray[1], dateArray[2], dateArray[3], dateArray[4], dateArray[5]);
-		let graphData = [date, 0, null, null, 0, 0];
+		const date = new Date(dateArray[0], dateArray[1], dateArray[2], dateArray[3], dateArray[4], dateArray[5]);
+		const graphData = [date, 0, 0, null, 0, 0];
 		//           <        date     >, <battery volt>, <solar panel>, <load>, <generator to batteries>, <total from generator>
 		// console.log(packetCollection.packets);
-		for(let j in packetCollection.packets){
-			let packet = packetCollection.packets[j];
-			// console.log(packet);
-			let packetType = packet.packetType;
-			// console.log(packetType);
+		for(const packet of packetCollection.packets){
+			const packetType = packet.packetType;
 			if(packetType === "FX_STATUS"){
 				graphData[1] = packet.batteryVoltage;
 				graphData[3] += packet.outputVoltage * packet.inverterCurrent;
 				graphData[4] += packet.inputVoltage * packet.chargerCurrent;
 				graphData[5] += packet.inputVoltage * packet.buyCurrent;
 			} else if(packetType === "MXFM_STATUS"){
-				let amps = packet.pvCurrent;
-				let volts = packet.inputVoltage;
-				let watts = amps * volts;
-				graphData[2] = watts;
+				const amps = packet.pvCurrent;
+				const volts = packet.inputVoltage;
+				const watts = amps * volts;
+				graphData[2] += watts;
 			} else {
 				console.error("Unknown packet type: " + packetType);
 			}
@@ -338,44 +336,15 @@ function getJsonDataFromUrl(urlString, onSuccessFunction, onFailFunction=null){
 		}
 	});
 }
-function getDateString(date){
-	let hour = date.getHours();
-	let ampmString = "AM";
-	if(hour > 12){
-		ampmString = "PM";
-		hour -= 12;
-	}
-	if(hour === 0){
-		hour = 12;
-	}
-	let minuteString = "" + date.getMinutes();
-	if(minuteString.length === 1){
-		minuteString = "0" + minuteString;
-	}
-	return "" + hour + ":" + minuteString + " " + ampmString;
-}
 function setBatteryVoltage(volts){
 	if(volts == null){
 		volts = "?";
 	}
 	document.getElementById("battery_voltage").innerHTML = volts;
 }
-function setPanelAmpsVolts(amps, volts){
-	let watts;
-	if(amps == null || volts == null){
-		amps = "?";
-		volts = "?";
-		watts = "?";
-	} else {
-		watts = amps * volts;
-	}
-	// document.getElementById("panel_watts").innerHTML = watts;
-	setIDText("panel_watts", watts);
-	// document.getElementById("panel_amps").innerHTML = amps;
-	setIDText("panel_amps", amps);
-	// document.getElementById("panel_volts").innerHTML = volts;
-	setIDText("panel_volts", volts);
-
+function setPVAndCharger(pv, charger){
+	setIDText("panel_watts", pv);
+	setIDText("charger", charger);
 }
 function setIDText(idString, text){
 	document.getElementById(idString).innerText = text;
@@ -416,7 +385,7 @@ function updateOuthouse() {
 				}
 			}
 			setIDText("occupancy", occupied ? "occupied" : "vacant");
-			setIDText("temperature_f", temperatureCelsius == null ? "?" : toF(temperatureCelsius));
+			setIDText("temperature_f", temperatureCelsius == null ? "?" : toF(temperatureCelsius).toFixed(1));
 			setIDText("humidity", humidity == null ? "?" : humidity)
 		} else {
 			console.log("no outhouse packets");
@@ -434,7 +403,7 @@ function toF(celsius){
 
 function main(){
 	setBatteryVoltage(null);
-	setPanelAmpsVolts(null, null);
+	setPVAndCharger(null, null);
 	setIDText("generator_status", "?");
 	setIDText("generator_total_watts", "?");
 	setIDText("generator_charge_watts", "?");
