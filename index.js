@@ -195,7 +195,11 @@ function updateCurrent(lastPacketCollection){
 	for(const packet of lastPacketCollection.packets){
 		let packetType = packet.packetType;
 		let address = packet.address;
+		if(deviceInfo){
+			deviceInfo += "|";
+		}
 		if(packetType === "FX_STATUS"){
+		    deviceInfo += "FX";
 			// address = packet.inverterAddress;
 			let batteryVoltage = packet.batteryVoltage;
 			setBatteryVoltage(batteryVoltage);
@@ -217,6 +221,7 @@ function updateCurrent(lastPacketCollection){
 			chargeWattsFromGenerator += packet.inputVoltage * packet.chargerCurrent;
 			totalWattsFromGenerator += packet.inputVoltage * packet.buyCurrent;
 		} else if(packetType === "MXFM_STATUS"){
+			deviceInfo += "MX";
 			// address = packet.address;
 			pvWatts += packet.pvCurrent * packet.inputVoltage;
 			chargerWatts += packet.chargerCurrent * packet.batteryVoltage;
@@ -228,13 +233,9 @@ function updateCurrent(lastPacketCollection){
 			auxModeDict[address] = auxMode;
 			chargerModeDict[address] = chargerMode;
 		} else {
+		    deviceInfo += "UNKNOWN";
 			console.error("Unknown packet type: " + packetType);
 		}
-		if(deviceInfo){
-			deviceInfo += "|";
-		}
-		let splitPacketType = packetType.split("_");
-		deviceInfo += address + ":" + splitPacketType[0];
 	}
 	setPVAndCharger(pvWatts, chargerWatts);
 	setIDText("packets_info", deviceInfo);
@@ -344,7 +345,7 @@ function setBatteryVoltage(volts){
 }
 function setPVAndCharger(pv, charger){
 	setIDText("panel_watts", pv);
-	setIDText("charger", charger);
+	setIDText("charger", charger == null ? null : charger.toFixed(1));
 }
 function setIDText(idString, text){
 	document.getElementById(idString).innerText = text;

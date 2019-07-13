@@ -1,31 +1,14 @@
 <!DOCTYPE html>
 <html>
 	<head>
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 		<title>Solarthing</title>
 		<link rel="stylesheet" type="text/css" href="./index.css">
 		<!--Init javascript libraries-->
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 		<!--<script src="http://192.168.10.250:5984/_utils/script/couch.js"></script>-->
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 
-		<script>
-			const SOUCES = [
-				"/_utils/script/json2.js", "/_utils/script/sha1.js", "/_utils/script/jquery.js?1.4.2",
-				"/_utils/script/jquery.couch.js?0.11.0", "/_utils/script/jquery.dialog.js?0.11.0"
-			];
-			let protocol = window.location.protocol;
-			console.log("protocol: " + protocol);
-			let hostname = window.location.hostname;
-			if(protocol === "file:"){ // if we are hosting this locally, go to correct server
-				protocol = "http:";
-				hostname = "192.168.10.250";
-			}
-			for(const source of SOUCES){
-				let fullSource = protocol + "//" + hostname + ":5984" + source;
-				console.log("loading: " + fullSource);
-				document.write('<script src="' + fullSource + '">');
-				document.write("</" + "script>"); // to make intellij happy
-			}
-		</script>
 	</head>
 	<body>
 		<h1>Wild Mountain Farms Power Information</h1>
