@@ -375,19 +375,31 @@ function updateOuthouse() {
 			let occupied = false;
 			let temperatureCelsius = null;
 			let humidity = null;
+
+			let doorOpen = false;
+			let lastClose = null;
+			let lastOpen = null;
 			for(const packet of newestCollection.packets){
 				if(packet.packetType === "OCCUPANCY"){
 					occupied = packet.occupancy === 1
 				} else if(packet.packetType === "WEATHER"){
 					temperatureCelsius = packet.temperatureCelsius;
 					humidity = packet.humidityPercent;
+				} else if(packet.packetType === "DOOR") {
+					console.log(packet);
+					doorOpen = packet.isOpen;
+					lastClose = packet.lastCloseTimeMillis;
+					lastOpen = packet.lastOpenTimeMillis;
 				} else {
 					console.error("unknown packetType: " + packet.packetType);
 				}
 			}
 			setIDText("occupancy", occupied ? "occupied" : "vacant");
 			setIDText("temperature_f", temperatureCelsius == null ? "?" : toF(temperatureCelsius).toFixed(1));
-			setIDText("humidity", humidity == null ? "?" : humidity)
+			setIDText("humidity", humidity == null ? "?" : humidity);
+			setIDText("door", doorOpen ? "open" : "closed");
+			setIDText("door_last_close", lastClose ? moment(new Date(lastClose)).fromNow() : "unknown");
+			setIDText("door_last_open", lastOpen ? moment(new Date(lastOpen)).fromNow() : "unknown");
 		} else {
 			console.log("no outhouse packets");
 		}
@@ -414,5 +426,8 @@ function main(){
 	setIDText("occupancy", "?");
 	setIDText("temperature_f", "?");
 	setIDText("humidity", "?");
+	setIDText("door", null);
+	setIDText("door_last_close", null);
+	setIDText("door_last_open", null);
 }
 main();
