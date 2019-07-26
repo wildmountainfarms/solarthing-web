@@ -340,6 +340,8 @@ function getJsonDataFromUrl(urlString, onSuccessFunction, onFailFunction=null){
 function setBatteryVoltage(volts){
 	if(volts == null){
 		volts = "?";
+	} else {
+		volts = volts.toFixed(1);
 	}
 	document.getElementById("battery_voltage").innerHTML = volts;
 }
