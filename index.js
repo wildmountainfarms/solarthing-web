@@ -6,11 +6,13 @@ google.charts.setOnLoadCallback(function(){
 	drawLogScales();
 	updateOuthouse()
 });
-// TODO Possibly use this in future: https://stackoverflow.com/a/14521482/5434860 + prompt("enter ip", "default ip") for couchdb
+const URL_PARAMETERS = new URLSearchParams(window.location.search);
+const DATABASE_URL_PARAM = URL_PARAMETERS.get("database");
 
-const DATABASE_URL = window.location.protocol === "file:" ?
+const DATABASE_URL = DATABASE_URL_PARAM != null ? DATABASE_URL_PARAM : (window.location.protocol === "file:" ?
 	"http://192.168.10.250:5984" :
-	window.location.protocol + "//" +  window.location.hostname + ":5984";
+	window.location.protocol + "//" +  window.location.hostname + ":5984");
+console.log("database url: " + DATABASE_URL);
 const SOLAR_DB = "/solarthing";
 const OUTHOUSE_DB = "/outhouse"
 const DESIGN = "/_design";
@@ -126,16 +128,29 @@ function toggleHours() {
 	}
 }
 
+function jsonDataToPacketCollectionArray(jsonData){
+	const packetCollections = [];
+	for(const row of jsonData.rows){
+		packetCollections.push(row.value);
+	}
+	return packetCollections;
+}
+
 function drawLogScales() {
 	// console.log("drawing log scales");
 	const element = document.getElementById("chart_div");
 	const lastHours = desiredLastHours;
 	getJsonDataLastHours(lastHours, function (jsonData) {
-		updateCurrent(getLastPacketCollectionFromJsonData(jsonData));
+	    const map = sortPackets(jsonDataToPacketCollectionArray(jsonData), 2 * 60 * 1000);
+	    const sourceId = Array.from(map.keys())[0];
+	    const packets = map.get(sourceId);
+	    console.log(map);
+	    console.log("using sourceId: " + sourceId);
+		updateCurrentSolar(packets[packets.length - 1]);
 
 		element.innerHTML = "";
 
-		let usedGraphData = updateGraphData(jsonData);
+		let usedGraphData = updateSolarGraphData(packets);
 		let chart = new google.visualization.LineChart(element);
 		let newOptions = Object.assign({}, graphOptions, {title: "Last " + lastHours + " Hours"});
 		chart.draw(usedGraphData, newOptions);
@@ -145,7 +160,7 @@ function drawLogScales() {
 		graphUpdateTimeoutID = setTimeout(drawLogScales, 3000);
 	});
 }
-function updateGraphData(jsonData){
+function updateSolarGraphData(packets){
 	let graphData = new google.visualization.DataTable();
 	graphData.addColumn('datetime', 'X');
 	graphData.addColumn('number', 'Battery V');
@@ -154,11 +169,10 @@ function updateGraphData(jsonData){
 	graphData.addColumn('number', "Gen W -> Battery");
 	graphData.addColumn('number', "Gen W (Total)");
 
-	let rows = getGraphDataFromPacketCollectionArray(jsonData.rows);
-	graphData.addRows(rows);
+	graphData.addRows(getGraphDataFromPacketCollectionArray(packets));
 	return graphData;
 }
-function updateCurrent(lastPacketCollection){
+function updateCurrentSolar(lastPacketCollection){
 	function getDictString(dict){
 		let r = "";
 		let isFirst = true;
@@ -183,6 +197,8 @@ function updateCurrent(lastPacketCollection){
 	const errorsMXDict = {};
 	const auxModeDict = {};
 	const chargerModeDict = {};
+
+	const errorsRoverDict = {};
 
 	let load = 0;
 
@@ -232,8 +248,14 @@ function updateCurrent(lastPacketCollection){
 			errorsMXDict[address] = errors;
 			auxModeDict[address] = auxMode;
 			chargerModeDict[address] = chargerMode;
+		} else if(packetType === "RENOGY_ROVER_STATUS"){
+			const serial = packet.productSerialNumber;
+			pvWatts = packet.pvCurrent * packet.inputVoltage;
+			chargerWatts += packet.chargingPower;
+			errorsRoverDict[serial] = packet.errors;
+			chargerModeDict[serial] = packet.chargingStateName;
+			deviceInfo += "Rover";
 		} else {
-		    deviceInfo += "UNKNOWN";
 			console.error("Unknown packet type: " + packetType);
 		}
 	}
@@ -247,6 +269,7 @@ function updateCurrent(lastPacketCollection){
 	setIDText("warnings", getDictString(warningsDict));
 	setIDText("errors_fx", getDictString(errorsFXDict));
 	setIDText("errors_mx", getDictString(errorsMXDict));
+	setIDText("errors_rover", getDictString(errorsRoverDict));
 	//
 	setIDText("load", load);
 	//
@@ -254,18 +277,15 @@ function updateCurrent(lastPacketCollection){
 	setIDText("generator_total_watts", totalWattsFromGenerator);
 	setIDText("generator_charge_watts", chargeWattsFromGenerator);
 }
-function getLastPacketCollectionFromJsonData(jsonData){
-	let rows = jsonData.rows;
-	return rows[rows.length - 1].value
-}
 
 function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 	let r = [];
 	for(const packetCollectionValue of packetCollectionArray){
-		const packetCollection = packetCollectionValue.value;
-		const dateArray = packetCollection.dateArray;
+		const packetCollection = packetCollectionValue;
+		// const dateArray = packetCollection.dateArray;
 		// some set to 0 because we want to do +=, otherwise set to null
-		const date = new Date(dateArray[0], dateArray[1], dateArray[2], dateArray[3], dateArray[4], dateArray[5]);
+		// const date = new Date(dateArray[0], dateArray[1], dateArray[2], dateArray[3], dateArray[4], dateArray[5]);
+		const date = new Date(packetCollection.dateMillis);
 		const graphData = [date, 0, 0, null, 0, 0];
 		//           <        date     >, <battery volt>, <solar panel>, <load>, <generator to batteries>, <total from generator>
 		// console.log(packetCollection.packets);
@@ -281,6 +301,9 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 				const volts = packet.inputVoltage;
 				const watts = amps * volts;
 				graphData[2] += watts;
+			} else if(packetType === "RENGOY_ROVER_STATUS"){
+				const power = packet.pvCurrent * packet.inputVoltage;
+				graphData[2] += power;
 			} else {
 				console.error("Unknown packet type: " + packetType);
 			}
@@ -364,7 +387,7 @@ function updateOuthouse() {
 		let minDate = 0;
 		let newestCollection = null;
 		for(const packetCollectionValue of packetCollections){
-			const packetCollection = packetCollectionValue.value
+			const packetCollection = packetCollectionValue.value;
 			const dateMillis = packetCollection.dateMillis;
 			if(dateMillis > minDate){
 				newestCollection = packetCollection;
@@ -415,6 +438,113 @@ function toF(celsius){
 	return celsius * 1.8 + 32;
 }
 
+class PacketGroup {
+	constructor(packets, dateMillis, extraDateMillisPacketMap = null){
+		this.packets = packets;
+		this.dateMillis = dateMillis;
+		this.extraDateMillisPacketMap = extraDateMillisPacketMap;
+	}
+}
+
+class ParsedPacketGroup extends PacketGroup{
+	constructor(packets, dateMillis, sourceId, fragmentId){
+		super(packets, dateMillis);
+		this.sourceId = sourceId;
+		this.fragmentId = fragmentId;
+	}
+}
+
+function sortPackets(groups, maxTimeDistance = (60 * 1000)) {
+    const map = new Map();
+    for(const group of groups){
+        const packets = [];
+        let sourceId = "default";
+        let fragmentId = null; // int or null
+        console.log(group);
+        for(const packet of group.packets){
+        	switch(packet.packetType){
+				case "SOURCE":
+					sourceId = packet.sourceId;
+					break;
+				case "FRAGMENT_INDICATOR":
+					fragmentId = packet.fragmentId;
+					break;
+				default:
+					packets.push(packet); // this must be a normal packet
+					break;
+			}
+        }
+        let list = map.get(sourceId);
+        if(list == null){
+        	list = [];
+        	map.set(sourceId, list);
+		}
+        list.push(new ParsedPacketGroup(packets, group.dateMillis, sourceId, fragmentId));
+    }
+    const r = new Map(); // HashMap<String, List<PacketGroup>>()
+    for(const entry of map.entries()){
+    	const sourceId = entry[0]; // sourceId will be the same for everything in list
+    	const list = entry[1];
+
+        const fragmentMap = new Map(); //HashMap<Int?, MutableList<ParsedPacketGroup>>()
+        for(const packetGroup of list){
+        	let newList = fragmentMap.get(packetGroup.fragmentId);
+        	if(newList == null){
+        		newList = [];
+        		fragmentMap.set(packetGroup.fragmentId, newList);
+			}
+        	newList.push(packetGroup);
+        }
+        const fragmentIds = Array.from(fragmentMap.keys());
+        fragmentIds.sort(function(o1, o2){
+            if(o1 == null){
+            	return 1;
+			}
+            if(o2 == null){
+            	return -1;
+			}
+            return o1 - o2;
+		});
+        const masterFragmentId = fragmentIds[0];
+        const masterList = fragmentMap.get(masterFragmentId);
+        const packetGroups = []; // mutableListOf<PacketGroup>()
+        for(const masterGroup of masterList){
+            const extraDateMillisPacketMap = new Map(); //HashMap<Packet, Long>()
+            const packetList = [];// mutableListOf<Packet>()
+            for(const masterPacket of masterGroup.packets){
+				packetList.push(masterPacket);
+                extraDateMillisPacketMap[masterPacket] = masterGroup.dateMillis
+            }
+            for(const fragmentId of fragmentIds){
+                if(fragmentId === masterFragmentId) continue;
+                const packetGroupList = fragmentMap.get(fragmentId); //: List<ParsedPacketGroup> = fragmentMap[fragmentId]!!
+                // now we want to find the closest packet group
+                // TODO This is a perfect place to use binary search
+                let closest = null; //: ParsedPacketGroup?
+                let smallestTime = null; // time since epoch in millis
+                for(const packetGroup of packetGroupList){
+                    const timeDistance = Math.abs(packetGroup.dateMillis - masterGroup.dateMillis);
+                    if(smallestTime == null || timeDistance < smallestTime){
+                        closest = packetGroup;
+                        smallestTime = timeDistance;
+                    }
+                }
+                if(closest == null || smallestTime == null){
+                	throw "closest or smallestTime is null!";
+				}
+                if(smallestTime < maxTimeDistance){
+                    for(const packet of closest.packets){
+						packetList.push(packet);
+                        extraDateMillisPacketMap[packet] = closest.dateMillis;
+                    }
+                }
+            }
+            packetGroups.push(new PacketGroup(packetList, masterGroup.dateMillis, extraDateMillisPacketMap))
+        }
+        r.set(sourceId, packetGroups);
+    }
+    return r;
+}
 
 function main(){
 	setBatteryVoltage(null);
