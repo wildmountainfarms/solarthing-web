@@ -250,7 +250,7 @@ function updateCurrentSolar(lastPacketCollection){
 			chargerModeDict[address] = chargerMode;
 		} else if(packetType === "RENOGY_ROVER_STATUS"){
 			const serial = packet.productSerialNumber;
-			pvWatts = packet.pvCurrent * packet.inputVoltage;
+			pvWatts += packet.pvCurrent * packet.inputVoltage;
 			chargerWatts += packet.chargingPower;
 			errorsRoverDict[serial] = packet.errors;
 			chargerModeDict[serial] = packet.chargingStateName;
