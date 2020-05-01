@@ -317,7 +317,6 @@ function getGraphDataFromPacketCollectionArray(packetCollectionArray){
 				const power = packet.pvCurrent * packet.inputVoltage;
 				graphData[2] += power;
 			} else {
-				console.error("Unknown packet type: " + packetType);
 			}
 		}
 		let lastData = null;
