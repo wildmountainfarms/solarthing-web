@@ -4,7 +4,7 @@ google.charts.setOnLoadCallback(function(){
 	console.log("got callback");
 	console.log("$: " + $);
 	drawLogScales();
-	updateOuthouse()
+	// updateOuthouse();
 });
 const URL_PARAMETERS = new URLSearchParams(window.location.search);
 const DATABASE_URL_PARAM = URL_PARAMETERS.get("database");
@@ -208,17 +208,17 @@ function updateCurrentSolar(lastPacketCollection){
 
 	let pvWatts = 0;
 	let chargerWatts = 0;
+	let batteryVoltage = null;
 	for(const packet of lastPacketCollection.packets){
 		let packetType = packet.packetType;
 		let address = packet.address;
-		if(deviceInfo){
-			deviceInfo += "|";
-		}
+		let wasKnownPacket = true;
 		if(packetType === "FX_STATUS"){
 		    deviceInfo += "FX";
 			// address = packet.inverterAddress;
-			let batteryVoltage = packet.batteryVoltage;
-			setBatteryVoltage(batteryVoltage);
+            if (!batteryVoltage) {
+				batteryVoltage = packet.batteryVoltage;
+			}
 
 			let acMode = packet.acModeName;
 			let operatingMode = packet.operatingModeName;
@@ -239,6 +239,9 @@ function updateCurrentSolar(lastPacketCollection){
 		} else if(packetType === "MXFM_STATUS"){
 			deviceInfo += "MX";
 			// address = packet.address;
+			if (!batteryVoltage) {
+				batteryVoltage = packet.batteryVoltage;
+			}
 			pvWatts += packet.pvCurrent * packet.inputVoltage;
 			chargerWatts += packet.chargerCurrent * packet.batteryVoltage;
 
@@ -249,6 +252,9 @@ function updateCurrentSolar(lastPacketCollection){
 			auxModeDict[address] = auxMode;
 			chargerModeDict[address] = chargerMode;
 		} else if(packetType === "RENOGY_ROVER_STATUS"){
+			if (!batteryVoltage) {
+				batteryVoltage = packet.batteryVoltage;
+			}
 			const serial = packet.productSerialNumber;
 			pvWatts += packet.pvCurrent * packet.inputVoltage;
 			chargerWatts += packet.chargingPower;
@@ -257,8 +263,14 @@ function updateCurrentSolar(lastPacketCollection){
 			deviceInfo += "Rover";
 		} else {
 			console.error("Unknown packet type: " + packetType);
+			wasKnownPacket = false;
+		}
+		setBatteryVoltage(batteryVoltage);
+		if(wasKnownPacket){
+			deviceInfo += "|";
 		}
 	}
+	deviceInfo = deviceInfo.substr(0, deviceInfo.length - 1);
 	setPVAndCharger(pvWatts, chargerWatts);
 	setIDText("packets_info", deviceInfo);
 	setIDText("operating_mode", getDictString(operatingModeDict));
@@ -351,6 +363,7 @@ function getJsonDataSince(date, onSuccessFunction, onFailFunction=null){
 
 }
 function getJsonDataFromUrl(urlString, onSuccessFunction, onFailFunction=null){
+	// It would be nice to add explicit gzip encoding here, but the browser should do that automatically: https://stackoverflow.com/a/3778750/5434860
 	$.getJSON(urlString,
 	function(jsonData){
 		onSuccessFunction(jsonData);
