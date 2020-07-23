@@ -12,6 +12,7 @@ const DATABASE_URL_PARAM = URL_PARAMETERS.get("database");
 const DATABASE_URL = DATABASE_URL_PARAM != null ? DATABASE_URL_PARAM : (window.location.protocol === "file:" ?
 	"http://192.168.10.250:5984" :
 	window.location.protocol + "//" +  window.location.hostname + ":5984");
+const SOURCE_ID = "default";
 console.log("database url: " + DATABASE_URL);
 const SOLAR_DB = "/solarthing";
 const OUTHOUSE_DB = "/outhouse"
@@ -142,10 +143,8 @@ function drawLogScales() {
 	const lastHours = desiredLastHours;
 	getJsonDataLastHours(lastHours, function (jsonData) {
 	    const map = sortPackets(jsonDataToPacketCollectionArray(jsonData), 2 * 60 * 1000);
-	    const sourceId = Array.from(map.keys())[0];
-	    const packets = map.get(sourceId);
+	    const packets = map.get(SOURCE_ID);
 	    console.log(map);
-	    console.log("using sourceId: " + sourceId);
 		updateCurrentSolar(packets[packets.length - 1]);
 
 		element.innerHTML = "";
@@ -381,7 +380,7 @@ function setBatteryVoltage(volts){
 	document.getElementById("battery_voltage").innerHTML = volts;
 }
 function setPVAndCharger(pv, charger){
-	setIDText("panel_watts", pv);
+	setIDText("panel_watts", pv == null ? null : pv.toFixed(1));
 	setIDText("charger", charger == null ? null : charger.toFixed(1));
 }
 function setIDText(idString, text){
