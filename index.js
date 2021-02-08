@@ -4,24 +4,24 @@ google.charts.setOnLoadCallback(function(){
 	console.log("got callback");
 	console.log("$: " + $);
 	drawLogScales();
-	// updateOuthouse();
 });
 const URL_PARAMETERS = new URLSearchParams(window.location.search);
 const DATABASE_URL_PARAM = URL_PARAMETERS.get("database");
 
+// This expression is used to determine the database. If you'd like, you can replace it entirely with what you
+//     want your database url to be. However, if you are hosting this on the same computer as the database, you
+//     don't actually need to change this, as it will automatically use the ip and CouchDB's default port
 const DATABASE_URL = DATABASE_URL_PARAM != null ? DATABASE_URL_PARAM : (window.location.protocol === "file:" ?
 	"http://192.168.10.250:5984" :
 	window.location.protocol + "//" +  window.location.hostname + ":5984");
 const SOURCE_ID = "default";
 console.log("database url: " + DATABASE_URL);
 const SOLAR_DB = "/solarthing";
-const OUTHOUSE_DB = "/outhouse"
 const DESIGN = "/_design";
 const VIEW = "/_view";
 
 let desiredLastHours = null;
 let graphUpdateTimeoutID = null;
-let outhouseUpdateTimeoutID = null;
 
 const graphOptions = {
 	// title: "Cool Title",
@@ -390,65 +390,6 @@ function getJsonObjectFromUrl(urlString) {
     return $.getJSON(urlString);
 }
 
-function updateOuthouse() {
-    const minMillis = new Date().getTime() - 5 * 60 * 1000;
-	getJsonDataFromUrl(DATABASE_URL + OUTHOUSE_DB + DESIGN + "/packets" + VIEW + "/millis" + "?startkey=" + minMillis, function(jsonData){
-		console.log(jsonData);
-		const packetCollections = jsonData.rows;
-		let minDate = 0;
-		let newestCollection = null;
-		for(const packetCollectionValue of packetCollections){
-			const packetCollection = packetCollectionValue.value;
-			const dateMillis = packetCollection.dateMillis;
-			if(dateMillis > minDate){
-				newestCollection = packetCollection;
-				minDate = dateMillis;
-			}
-		}
-		if(newestCollection != null){
-			console.log("newestCollection:");
-			console.log(newestCollection);
-			let occupied = false;
-			let temperatureCelsius = null;
-			let humidity = null;
-
-			let doorOpen = false;
-			let lastClose = null;
-			let lastOpen = null;
-			for(const packet of newestCollection.packets){
-				if(packet.packetType === "OCCUPANCY"){
-					occupied = packet.occupancy === 1
-				} else if(packet.packetType === "WEATHER"){
-					temperatureCelsius = packet.temperatureCelsius;
-					humidity = packet.humidityPercent;
-				} else if(packet.packetType === "DOOR") {
-					console.log(packet);
-					doorOpen = packet.isOpen;
-					lastClose = packet.lastCloseTimeMillis;
-					lastOpen = packet.lastOpenTimeMillis;
-				} else {
-					console.error("unknown packetType: " + packet.packetType);
-				}
-			}
-			setIDText("occupancy", occupied ? "occupied" : "vacant");
-			setIDText("temperature_f", temperatureCelsius == null ? "?" : toF(temperatureCelsius).toFixed(1));
-			setIDText("humidity", humidity == null ? "?" : humidity);
-			setIDText("door", doorOpen ? "open" : "closed");
-			setIDText("door_last_close", lastClose ? moment(new Date(lastClose)).fromNow() : "unknown");
-			setIDText("door_last_open", lastOpen ? moment(new Date(lastOpen)).fromNow() : "unknown");
-		} else {
-			console.log("no outhouse packets");
-		}
-		outhouseUpdateTimeoutID = setTimeout(updateOuthouse, 12000);
-	}, function(){
-		console.log("got error, trying again in 3 seconds");
-		outhouseUpdateTimeoutID = setTimeout(updateOuthouse, 3000);
-	});
-}
-function toF(celsius){
-	return celsius * 1.8 + 32;
-}
-
 class PacketGroup {
 	constructor(packets, dateMillis, extraDateMillisPacketMap = null){
 		this.packets = packets;
@@ -565,12 +506,5 @@ function main(){
 	setIDText("generator_charge_watts", "?");
 	setIDText("load", "?");
 	toggleHours();
-
-	setIDText("occupancy", "?");
-	setIDText("temperature_f", "?");
-	setIDText("humidity", "?");
-	setIDText("door", null);
-	setIDText("door_last_close", null);
-	setIDText("door_last_open", null);
 }
 main();
